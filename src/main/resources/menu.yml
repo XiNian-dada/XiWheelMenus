@@ -1,0 +1,17 @@
+name: "默认菜单"
+command: "cd"
+aliases:
+  - "test"
+  - "defaultmenu"
+items:
+  close:
+    name: "关闭菜单"
+    item: player_head:eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2FkNTMyYWRiYTliNGY5ZWZlYjQ3ZjRkNmI0ZmMxZWQyZTZkZTVjY2FhNzc5ZjU1NTk4ZTFlYWVjYWVlZjg5MiJ9fX0=
+  test1:
+    name: "测试指令1"
+    item: STONE
+    command: "say 测试指令1"
+  test3:
+    name: "测试指令3"
+    item: DIAMOND_BLOCK
+    command: "suicide"

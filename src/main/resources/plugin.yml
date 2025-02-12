@@ -1,0 +1,7 @@
+name: XiWheelMenus
+version: '${project.version}'
+main: cn.hairuosky.xiwheelmenus.XiWheelMenus
+api-version: '1.16'
+commands:
+  xiwheelmenus:
+    description: XiWheelMenus commands
