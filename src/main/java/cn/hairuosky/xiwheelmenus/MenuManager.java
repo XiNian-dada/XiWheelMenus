@@ -33,6 +33,15 @@ public class MenuManager implements Listener {
     private final Map<Player, Integer> playerMenuItemIndexes = new HashMap<>();
     private final Map<Player, FileConfiguration> playerMenuConfigs = new HashMap<>();
     private final Map<Player, BukkitRunnable> playerMoveTasks = new HashMap<>();
+    private final Map<Player, BukkitRunnable> playerAnimationTasks = new HashMap<>();
+
+    // Speed control variables
+    private final int openAnimationSteps = 20; // Steps for opening animation
+    private final int closeAnimationSteps = 20; // Steps for closing animation (reduced to 20 for faster closing)
+    private final int moveAnimationSteps = 40; // Steps for moving animation
+
+    // Map to store closing animation flag for each player
+    private final Map<Player, Boolean> playerClosingFlags = new HashMap<>();
 
     public MenuManager(XiWheelMenus plugin) {
         this.plugin = plugin;
@@ -127,22 +136,60 @@ public class MenuManager implements Listener {
         playerMenuConfigs.put(player, menuConfig);
 
         // Start the animation to move armor stands to their target locations
-        startArmorStandAnimation(player);
+        animateArmorStands(player, playerLocation, armorStandLocations, openAnimationSteps);
     }
 
-    private void startArmorStandAnimation(Player player) {
+    public void closeMenu(Player player) {
+        // Check if a closing animation is already in progress
+        if (playerClosingFlags.getOrDefault(player, false)) {
+            return; // Do nothing if a closing animation is already in progress
+        }
+
+        // Set the closing flag to true
+        playerClosingFlags.put(player, true);
+
         List<ArmorStand> armorStands = playerArmorStands.get(player);
         List<Location> armorStandLocations = playerArmorStandLocations.get(player);
         Location playerLocation = playerMenuCenters.get(player);
 
-        if (armorStands == null || armorStandLocations == null || playerLocation == null) {
+        if (armorStands != null && !armorStands.isEmpty() && armorStandLocations != null && playerLocation != null) {
+            // Start the animation to move armor stands back to the player location
+            animateArmorStands(player, armorStandLocations, playerLocation, closeAnimationSteps, () -> {
+                // Remove armor stands after animation
+                for (ArmorStand armorStand : armorStands) {
+                    armorStand.remove();
+                }
+                playerArmorStands.remove(player);
+                playerArmorStandLocations.remove(player);
+                playerMenuCenters.remove(player);
+                playerMenuItemIndexes.remove(player);
+                playerMenuConfigs.remove(player);
+                BukkitRunnable moveTask = playerMoveTasks.remove(player);
+                if (moveTask != null) {
+                    moveTask.cancel();
+                }
+                player.sendMessage(ChatColor.RED + "Menu closed.");
+                plugin.getLogger().info("Menu closed for player " + player.getName());
+
+                // Reset the closing flag
+                playerClosingFlags.remove(player);
+            });
+        }
+    }
+
+    private void animateArmorStands(Player player, Location fromLocation, List<Location> toLocations, int totalSteps) {
+        List<ArmorStand> armorStands = playerArmorStands.get(player);
+        if (armorStands == null || armorStands.isEmpty() || toLocations == null) {
             return;
         }
 
-        int itemCount = armorStands.size();
+        // Cancel any existing animation task
+        BukkitRunnable existingTask = playerAnimationTasks.remove(player);
+        if (existingTask != null) {
+            existingTask.cancel();
+        }
 
         BukkitRunnable animationTask = new BukkitRunnable() {
-            private final int totalSteps = 20; // Number of steps for the animation
             private int step = 0;
 
             @Override
@@ -152,18 +199,18 @@ public class MenuManager implements Listener {
                     return;
                 }
 
-                for (int i = 0; i < Math.min(itemCount, 6); i++) {
+                for (int i = 0; i < Math.min(armorStands.size(), toLocations.size()); i++) {
                     ArmorStand armorStand = armorStands.get(i);
-                    Location targetLocation = armorStandLocations.get(i);
                     Location currentLocation = armorStand.getLocation();
+                    Location targetLocation = toLocations.get(i);
 
                     // Calculate the intermediate location
                     double t = (double) step / totalSteps;
-                    double x = playerLocation.getX() + t * (targetLocation.getX() - playerLocation.getX());
-                    double y = playerLocation.getY() + t * (targetLocation.getY() - playerLocation.getY());
-                    double z = playerLocation.getZ() + t * (targetLocation.getZ() - playerLocation.getZ());
+                    double x = fromLocation.getX() + t * (targetLocation.getX() - fromLocation.getX());
+                    double y = fromLocation.getY() + t * (targetLocation.getY() - fromLocation.getY());
+                    double z = fromLocation.getZ() + t * (targetLocation.getZ() - fromLocation.getZ());
 
-                    Location intermediateLocation = new Location(playerLocation.getWorld(), x, y, z);
+                    Location intermediateLocation = new Location(currentLocation.getWorld(), x, y, z);
                     armorStand.teleport(intermediateLocation);
 
                     // Set the head pose to face the player
@@ -177,67 +224,61 @@ public class MenuManager implements Listener {
         };
 
         animationTask.runTaskTimer(plugin, 0, 1); // Run every tick (50 ms)
+        playerAnimationTasks.put(player, animationTask);
     }
 
-    public void closeMenu(Player player) {
+    private void animateArmorStands(Player player, List<Location> fromLocations, Location toLocation, int totalSteps, Runnable onComplete) {
         List<ArmorStand> armorStands = playerArmorStands.get(player);
-        List<Location> armorStandLocations = playerArmorStandLocations.get(player);
-        Location playerLocation = playerMenuCenters.get(player);
-
-        if (armorStands != null && !armorStands.isEmpty() && armorStandLocations != null && playerLocation != null) {
-            int itemCount = armorStands.size();
-
-            BukkitRunnable closeAnimationTask = new BukkitRunnable() {
-                private final int totalSteps = 20; // Number of steps for the animation
-                private int step = 0;
-
-                @Override
-                public void run() {
-                    if (step >= totalSteps) {
-                        this.cancel();
-                        // Remove armor stands after animation
-                        for (ArmorStand armorStand : armorStands) {
-                            armorStand.remove();
-                        }
-                        playerArmorStands.remove(player);
-                        playerArmorStandLocations.remove(player);
-                        playerMenuCenters.remove(player);
-                        playerMenuItemIndexes.remove(player);
-                        playerMenuConfigs.remove(player);
-                        BukkitRunnable moveTask = playerMoveTasks.remove(player);
-                        if (moveTask != null) {
-                            moveTask.cancel();
-                        }
-                        player.sendMessage(ChatColor.RED + "Menu closed.");
-                        plugin.getLogger().info("Menu closed for player " + player.getName());
-                        return;
-                    }
-
-                    for (int i = 0; i < Math.min(itemCount, 6); i++) {
-                        ArmorStand armorStand = armorStands.get(i);
-                        Location currentLocation = armorStand.getLocation();
-
-                        // Calculate the intermediate location
-                        double t = (double) step / totalSteps;
-                        double x = currentLocation.getX() + t * (playerLocation.getX() - currentLocation.getX());
-                        double y = currentLocation.getY() + t * (playerLocation.getY() - currentLocation.getY());
-                        double z = currentLocation.getZ() + t * (playerLocation.getZ() - currentLocation.getZ());
-
-                        Location intermediateLocation = new Location(playerLocation.getWorld(), x, y, z);
-                        armorStand.teleport(intermediateLocation);
-
-                        // Set the head pose to face the player
-                        Vector direction = player.getLocation().toVector().subtract(intermediateLocation.toVector()).setY(0).normalize();
-                        float yaw = (float) Math.toDegrees(Math.atan2(direction.getX(), direction.getZ())) - 90;
-                        armorStand.setHeadPose(new EulerAngle(Math.toRadians(-90), Math.toRadians(yaw), 0));
-                    }
-
-                    step++;
-                }
-            };
-
-            closeAnimationTask.runTaskTimer(plugin, 0, 1); // Run every tick (50 ms)
+        if (armorStands == null || armorStands.isEmpty() || fromLocations == null) {
+            return;
         }
+
+        // Cancel any existing animation task
+        BukkitRunnable existingTask = playerAnimationTasks.remove(player);
+        if (existingTask != null) {
+            existingTask.cancel();
+        }
+
+        // Store the target location at the start of the animation
+        Location fixedTargetLocation = toLocation.clone();
+
+        BukkitRunnable animationTask = new BukkitRunnable() {
+            private int step = 0;
+
+            @Override
+            public void run() {
+                if (step >= totalSteps) {
+                    this.cancel();
+                    if (onComplete != null) {
+                        onComplete.run();
+                    }
+                    return;
+                }
+
+                for (int i = 0; i < Math.min(armorStands.size(), fromLocations.size()); i++) {
+                    ArmorStand armorStand = armorStands.get(i);
+                    Location currentLocation = armorStand.getLocation();
+                    Location fromLocation = fromLocations.get(i);
+
+                    // Calculate the intermediate location
+                    double t = (double) step / totalSteps;
+                    double x = currentLocation.getX() + t * (fixedTargetLocation.getX() - currentLocation.getX());
+                    double y = currentLocation.getY() + t * (fixedTargetLocation.getY() - currentLocation.getY());
+                    double z = currentLocation.getZ() + t * (fixedTargetLocation.getZ() - currentLocation.getZ());
+
+                    Location intermediateLocation = new Location(currentLocation.getWorld(), x, y, z);
+                    armorStand.teleport(intermediateLocation);
+
+                    // Keep the current head pose
+                    armorStand.setHeadPose(armorStand.getHeadPose());
+                }
+
+                step++;
+            }
+        };
+
+        animationTask.runTaskTimer(plugin, 0, 1); // Run every tick (50 ms)
+        playerAnimationTasks.put(player, animationTask);
     }
 
     @EventHandler
@@ -286,7 +327,7 @@ public class MenuManager implements Listener {
             private final List<Location> armorStandLocations = playerArmorStandLocations.get(player);
             private final int itemCount = armorStands.size();
             private int step = 0;
-            private final int totalSteps = 40; // Increase number of steps for smoother movement
+            private final int totalSteps = moveAnimationSteps; // Use moveAnimationSteps for smooth movement
 
             @Override
             public void run() {
