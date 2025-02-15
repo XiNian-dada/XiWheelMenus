@@ -4,10 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3e4e114c-9f61-4804-8ea4-54ffd2926f1b" name="变更" comment="refactor(XiWheelMenus): 更新 TODO 注释&#10;&#10;- 增加了关于动画流畅度和盔甲架面向问题的 TODO 项&#10;- 这个 commit没有修改实际代码，只是更新了注释">
+    <list default="true" id="3e4e114c-9f61-4804-8ea4-54ffd2926f1b" name="变更" comment="refactor(menu): 重构菜单管理逻辑&#10;&#10;- 新增 LargeMenuHandler 类处理大菜单逻辑&#10;- 新增 SmallMenuHandler 类处理小菜单逻辑&#10;- 重构 MenuManager 类,使用新菜单处理器处理菜单操作&#10;- 优化菜单打开、关闭和移动逻辑">
+      <change afterPath="$PROJECT_DIR$/src/main/java/cn/hairuosky/xiwheelmenus/menuhandler/LargeMenuHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/cn/hairuosky/xiwheelmenus/menuhandler/SmallMenuHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/cn/hairuosky/xiwheelmenus/MenuManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/cn/hairuosky/xiwheelmenus/MenuManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/cn/hairuosky/xiwheelmenus/XiWheelMenus.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/cn/hairuosky/xiwheelmenus/XiWheelMenus.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,6 +28,9 @@
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectId" id="2svaA1v3x3SmNeITC2wrppbSCSl" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
@@ -43,7 +47,7 @@
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;Code Search&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -88,7 +92,11 @@
       <workItem from="1739361795543" duration="394000" />
       <workItem from="1739362198913" duration="1832000" />
       <workItem from="1739543077861" duration="5809000" />
-      <workItem from="1739587175703" duration="7636000" />
+      <workItem from="1739587175703" duration="12616000" />
+      <workItem from="1739613103163" duration="8787000" />
+      <workItem from="1739624021798" duration="3736000" />
+      <workItem from="1739627771445" duration="4763000" />
+      <workItem from="1739632567033" duration="1530000" />
     </task>
     <task id="LOCAL-00001" summary="refactor(xiwheelmenus):重构菜单管理逻辑&#10;&#10;- 新增 MenuManager 类，将菜单相关逻辑移至专门的管理器中- 优化了菜单打开、关闭和移动的处理方式&#10;-改进了玩家切换物品栏和移动时的菜单响应&#10;- 删除了 MenuCommandExecutor 中的冗余代码">
       <created>1739544850227</created>
@@ -111,7 +119,14 @@
       <option name="project" value="LOCAL" />
       <updated>1739548730876</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="feat(MenuManager): 优化盔甲架面向逻辑并添加调试功能- 移除单个 ArmorStand 的头部姿势设置，改为设置整体旋转&#10;- 添加 setArmorStandRotation 方法，使盔甲架面向圆心位置&#10;- 在关闭菜单时打印圆心位置，用于调试- 优化动画过程中盔甲架的旋转逻辑&#10;- 添加方向向量和旋转角度的调试输出- 新增 isFinite 方法检查方向向量是否有效">
+      <created>1739605943990</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1739605943990</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -120,6 +135,9 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="refactor(xiwheelmenus):重构菜单管理逻辑&#10;&#10;- 新增 MenuManager 类，将菜单相关逻辑移至专门的管理器中- 优化了菜单打开、关闭和移动的处理方式&#10;-改进了玩家切换物品栏和移动时的菜单响应&#10;- 删除了 MenuCommandExecutor 中的冗余代码" />
     <MESSAGE value="feat(MenuManager): 添加菜单开闭动画效果&#10;&#10;- 在打开菜单时，添加了将ArmorStand从玩家位置动画移动到目标位置的功能- 在关闭菜单时，添加了将ArmorStand从目标位置动画移动回玩家位置并移除的功能- 优化了菜单打开和关闭的逻辑，确保动画效果的正确执行" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(MenuManager): 添加菜单开闭动画效果&#10;&#10;- 在打开菜单时，添加了将ArmorStand从玩家位置动画移动到目标位置的功能- 在关闭菜单时，添加了将ArmorStand从目标位置动画移动回玩家位置并移除的功能- 优化了菜单打开和关闭的逻辑，确保动画效果的正确执行" />
+    <MESSAGE value="refactor(XiWheelMenus): 更新 TODO 注释&#10;&#10;- 增加了关于动画流畅度和盔甲架面向问题的 TODO 项&#10;- 这个 commit没有修改实际代码，只是更新了注释" />
+    <MESSAGE value="feat(MenuManager): 优化盔甲架面向逻辑并添加调试功能- 移除单个 ArmorStand 的头部姿势设置，改为设置整体旋转&#10;- 添加 setArmorStandRotation 方法，使盔甲架面向圆心位置&#10;- 在关闭菜单时打印圆心位置，用于调试- 优化动画过程中盔甲架的旋转逻辑&#10;- 添加方向向量和旋转角度的调试输出- 新增 isFinite 方法检查方向向量是否有效" />
+    <MESSAGE value="refactor(menu): 重构菜单管理逻辑&#10;&#10;- 新增 LargeMenuHandler 类处理大菜单逻辑&#10;- 新增 SmallMenuHandler 类处理小菜单逻辑&#10;- 重构 MenuManager 类,使用新菜单处理器处理菜单操作&#10;- 优化菜单打开、关闭和移动逻辑" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor(menu): 重构菜单管理逻辑&#10;&#10;- 新增 LargeMenuHandler 类处理大菜单逻辑&#10;- 新增 SmallMenuHandler 类处理小菜单逻辑&#10;- 重构 MenuManager 类,使用新菜单处理器处理菜单操作&#10;- 优化菜单打开、关闭和移动逻辑" />
   </component>
 </project>
