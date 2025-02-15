@@ -15,6 +15,7 @@ import java.util.Map;
 //TODO 现在只实现了生成和消失，注意，在菜单存在时执行指令会导致无法消失
 //TODO 盔甲架名字不一样
 //TODO 还没有测试6+的情况
+//TODO 动画流畅度不足，而且我希望盔甲架始终面向的是圆心位置而非玩家位置，需要修改。
 
 public final class XiWheelMenus extends JavaPlugin {
 

@@ -1,8 +1,6 @@
 package cn.hairuosky.xiwheelmenus;
 
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.ArmorStand;
@@ -16,7 +14,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
@@ -108,11 +105,10 @@ public class MenuManager implements Listener {
             armorStand.setGravity(false);
             armorStand.setBasePlate(false);
             armorStand.setArms(false);
+            armorStand.setRotation(0, 0); // 明确设置基础旋转为0
 
-            // Set the head pose to face the player
-            Vector headDirection = player.getLocation().toVector().subtract(armorStand.getLocation().toVector()).setY(0).normalize();
-            float yaw = (float) Math.toDegrees(Math.atan2(headDirection.getX(), headDirection.getZ())) - 90;
-            armorStand.setHeadPose(new EulerAngle(Math.toRadians(-90), Math.toRadians(yaw), 0));
+            // Set the armor stand to face the menu center
+            setArmorStandRotation(armorStand, armorStandLocation, playerLocation);
 
             String itemName = menuConfig.getString("items." + itemKeys.get(i) + ".item");
             ItemStack itemStack = createItemStack(itemName);
@@ -131,7 +127,10 @@ public class MenuManager implements Listener {
 
         playerArmorStands.put(player, armorStands);
         playerArmorStandLocations.put(player, armorStandLocations);
-        playerMenuCenters.put(player, playerLocation);
+        // 存储盔甲架环形中心点（计算圆心坐标）
+        Location center = playerLocation.clone();
+        center.add(radius * Math.cos(yawRad), 0, radius * Math.sin(yawRad)); // 根据初始角度偏移
+        playerMenuCenters.put(player, playerLocation.clone()); // 使用玩家的精确位置作为圆心
         playerMenuItemIndexes.put(player, initialIndex);
         playerMenuConfigs.put(player, menuConfig);
 
@@ -150,11 +149,14 @@ public class MenuManager implements Listener {
 
         List<ArmorStand> armorStands = playerArmorStands.get(player);
         List<Location> armorStandLocations = playerArmorStandLocations.get(player);
-        Location playerLocation = playerMenuCenters.get(player);
+        Location menuCenter = playerMenuCenters.get(player); // Use the stored menu center location
 
-        if (armorStands != null && !armorStands.isEmpty() && armorStandLocations != null && playerLocation != null) {
-            // Start the animation to move armor stands back to the player location
-            animateArmorStands(player, armorStandLocations, playerLocation, closeAnimationSteps, () -> {
+        if (armorStands != null && !armorStands.isEmpty() && armorStandLocations != null && menuCenter != null) {
+            // Print the menu center location
+            System.out.println("[DEBUG] Menu center location: " + menuCenter);
+
+            // Start the animation to move armor stands back to the menu center
+            animateArmorStands(player, armorStandLocations, menuCenter, closeAnimationSteps, () -> {
                 // Remove armor stands after animation
                 for (ArmorStand armorStand : armorStands) {
                     armorStand.remove();
@@ -176,6 +178,8 @@ public class MenuManager implements Listener {
             });
         }
     }
+
+
 
     private void animateArmorStands(Player player, Location fromLocation, List<Location> toLocations, int totalSteps) {
         List<ArmorStand> armorStands = playerArmorStands.get(player);
@@ -213,10 +217,8 @@ public class MenuManager implements Listener {
                     Location intermediateLocation = new Location(currentLocation.getWorld(), x, y, z);
                     armorStand.teleport(intermediateLocation);
 
-                    // Set the head pose to face the player
-                    Vector direction = player.getLocation().toVector().subtract(intermediateLocation.toVector()).setY(0).normalize();
-                    float yaw = (float) Math.toDegrees(Math.atan2(direction.getX(), direction.getZ())) - 90;
-                    armorStand.setHeadPose(new EulerAngle(Math.toRadians(-90), Math.toRadians(yaw), 0));
+                    // Set the armor stand to face the menu center
+                    setArmorStandRotation(armorStand, intermediateLocation, playerMenuCenters.get(player));
                 }
 
                 step++;
@@ -269,8 +271,8 @@ public class MenuManager implements Listener {
                     Location intermediateLocation = new Location(currentLocation.getWorld(), x, y, z);
                     armorStand.teleport(intermediateLocation);
 
-                    // Keep the current head pose
-                    armorStand.setHeadPose(armorStand.getHeadPose());
+                    // Set the armor stand to face the menu center
+                    setArmorStandRotation(armorStand, intermediateLocation, playerMenuCenters.get(player));
                 }
 
                 step++;
@@ -342,10 +344,8 @@ public class MenuManager implements Listener {
                     Location targetLocation = armorStandLocations.get(targetIndex);
                     armorStands.get(i).teleport(targetLocation);
 
-                    // Set the head pose to face the player
-                    Vector direction = player.getLocation().toVector().subtract(targetLocation.toVector()).setY(0).normalize();
-                    float yaw = (float) Math.toDegrees(Math.atan2(direction.getX(), direction.getZ())) - 90;
-                    armorStands.get(i).setHeadPose(new EulerAngle(Math.toRadians(-90), Math.toRadians(yaw), 0));
+                    // Set the armor stand to face the menu center
+                    setArmorStandRotation(armorStands.get(i), targetLocation, playerMenuCenters.get(player));
                 }
 
                 step++;
@@ -382,6 +382,7 @@ public class MenuManager implements Listener {
         }
     }
 
+
     private ItemStack createItemStack(String itemName) {
         if (itemName.startsWith("player_head:")) {
             String[] parts = itemName.split(":");
@@ -400,5 +401,51 @@ public class MenuManager implements Listener {
                 return new ItemStack(Material.STONE); // Default item if material not found
             }
         }
+    }
+
+    private void setArmorStandRotation(ArmorStand armorStand, Location armorStandLocation, Location targetLocation) {
+        // 1. 计算从盔甲架指向圆心的方向向量
+        Vector direction = targetLocation.toVector().subtract(armorStandLocation.toVector()).setY(0).normalize();
+
+        // 检查方向向量是否有效
+        if (!isFinite(direction)) {
+            System.out.println("[DEBUG] 方向向量无效: " + direction);
+            return;
+        }
+
+        // 2. 计算正确的基础角度（Minecraft坐标系）
+        double yaw = Math.toDegrees(Math.atan2(direction.getZ(), direction.getX())) - 90;
+
+        // 检查yaw是否有效
+        if (!Double.isFinite(yaw)) {
+            System.out.println("[DEBUG] Yaw值无效: " + yaw);
+            return;
+        }
+
+        // 3. 设置盔甲架的朝向（注意：Y轴旋转需要取反）
+        armorStand.setRotation((float) yaw, 0);
+
+        // 调试粒子（红色：盔甲架位置，绿色：实际面向方向）
+        Location headPos = armorStand.getLocation().add(0, 1.5, 0);
+        armorStand.getWorld().spawnParticle(Particle.REDSTONE, headPos, 5,
+                new Particle.DustOptions(Color.RED, 1));
+
+        // 获取盔甲架实际方向向量
+        Vector headDirection = new Vector(
+                Math.sin(Math.toRadians(-yaw)),
+                0,
+                Math.cos(Math.toRadians(-yaw))
+        );
+        armorStand.getWorld().spawnParticle(Particle.REDSTONE,
+                headPos.clone().add(headDirection), 5,
+                new Particle.DustOptions(Color.LIME, 1));
+        System.out.println("盔甲架位置: " + armorStand.getLocation() +
+                " 圆心位置: " + targetLocation +
+                " 计算Yaw: " + yaw +
+                " 实际盔甲架角度: " + armorStand.getLocation().getYaw());
+    }
+
+    private boolean isFinite(Vector vector) {
+        return Double.isFinite(vector.getX()) && Double.isFinite(vector.getY()) && Double.isFinite(vector.getZ());
     }
 }
